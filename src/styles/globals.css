@@ -1,0 +1,92 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --amber:    #F97316;
+  --amber-d:  #EA580C;
+  --amber-dd: #C2410C;
+  --gold:     #FBBF24;
+  --coral:    #FED7AA;
+  --peach:    #FFF7ED;
+  --char:     #1C1917;
+  --char-m:   #44403C;
+  --char-l:   #78716C;
+  --white:    #FFFBF7;
+  --border:   #F5D0A9;
+  --success:  #16A34A;
+  --error:    #DC2626;
+  --nav-h:    68px;
+  --sidebar-w:240px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--peach);
+  color: var(--char);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+h1,h2,h3,h4,h5 { font-family: 'Sora', sans-serif; }
+a { text-decoration: none; color: inherit; }
+button { cursor: pointer; font-family: 'Inter', sans-serif; border: none; outline: none; }
+input, textarea, select {
+  font-family: 'Inter', sans-serif;
+  font-size: .95rem;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 15px;
+  width: 100%;
+  outline: none;
+  background: #fff;
+  color: var(--char);
+  transition: border-color .15s, box-shadow .15s;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px rgba(249,115,22,.12);
+}
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--peach); }
+::-webkit-scrollbar-thumb { background: var(--coral); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--amber); }
+
+/* ── Responsive helpers ─────────────────────────── */
+@media (max-width: 768px) {
+  .hide-mobile { display: none !important; }
+}
+@media (min-width: 769px) {
+  .hide-desktop { display: none !important; }
+}
+@keyframes spin   { to { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+@keyframes slideIn{ from { opacity:0; transform:translateX(24px); } to { opacity:1; transform:translateX(0); } }
+.fade-in { animation: fadeIn .3s ease both; }
+
+/* ── Auth page full-height fix ──────────────────────────────── */
+/* Both panels fill the full viewport height — no scroll needed on desktop */
+.auth-root {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+.auth-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+.auth-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+}
+
+/* On mobile: full-width form, no left panel */
+@media (max-width: 768px) {
+  .auth-root  { height: auto; min-height: 100vh; }
+  .auth-right { min-height: 100vh; padding: 32px 24px; }
+}
