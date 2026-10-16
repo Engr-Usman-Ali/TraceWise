@@ -8,13 +8,20 @@ export interface NavDef {
   path: string;
 }
 
+
 const NAV: NavDef[] = [
   { label: 'Overview', icon: '📊', path: '/dashboard' },
   { label: 'Documents', icon: '📄', path: '/dashboard/documents' },
+  {
+    label: 'Dependency Explorer',
+    icon: '🔗',
+    path: '/dashboard/dependency-explorer',
+  },
   { label: 'Departments', icon: '🏢', path: '/dashboard/departments' },
   { label: 'Impact Reports', icon: '📈', path: '/dashboard/impact-reports' },
   { label: 'Profile', icon: '👤', path: '/dashboard/profile' },
 ];
+
 
 interface DashSidebarProps {
   notifCount?: number;

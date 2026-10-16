@@ -10,6 +10,9 @@ from app.routers import (
     notifications,
 )
 from app.routers.impact_reports import router as impact_reports_router
+from app.routers.dependency_explorer import (
+    router as dependency_explorer_router,
+)
 
 app = FastAPI(
     title="TraceWise API",
@@ -37,6 +40,9 @@ app.include_router(notifications.router)
 
 # Impact Reports router
 app.include_router(impact_reports_router, prefix="/api")
+
+# Dependency Explorer router
+app.include_router(dependency_explorer_router, prefix="/api")
 
 
 @app.get("/", tags=["health"])

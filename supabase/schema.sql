@@ -179,5 +179,90 @@ USING (
     )
 );
 
+-- TraceWise: Document Dependency Explorer
+-- Stores explicit relationships between documents.
+
+CREATE TABLE IF NOT EXISTS public.document_dependencies (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    company_id UUID NOT NULL
+        REFERENCES public.companies(id) ON DELETE CASCADE,
+
+    source_document_id UUID NOT NULL
+        REFERENCES public.documents(id) ON DELETE CASCADE,
+
+    target_document_id UUID NOT NULL
+        REFERENCES public.documents(id) ON DELETE CASCADE,
+
+    relationship_type TEXT NOT NULL DEFAULT 'references',
+    description TEXT,
+
+    confidence NUMERIC(5, 4)
+        CHECK (confidence IS NULL OR confidence BETWEEN 0 AND 1),
+
+    verification_status TEXT NOT NULL DEFAULT 'candidate'
+        CHECK (
+            verification_status IN ('candidate', 'verified', 'rejected')
+        ),
+
+    created_by UUID,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT dependency_no_self_link
+        CHECK (source_document_id <> target_document_id),
+
+    CONSTRAINT dependency_unique_link
+        UNIQUE (
+            company_id,
+            source_document_id,
+            target_document_id,
+            relationship_type
+        )
+);
+
+CREATE INDEX IF NOT EXISTS idx_dependencies_company
+    ON public.document_dependencies(company_id);
+
+CREATE INDEX IF NOT EXISTS idx_dependencies_source
+    ON public.document_dependencies(source_document_id);
+
+CREATE INDEX IF NOT EXISTS idx_dependencies_target
+    ON public.document_dependencies(target_document_id);
+
+ALTER TABLE public.document_dependencies ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "dependencies_select"
+    ON public.document_dependencies;
+
+DROP POLICY IF EXISTS "dependencies_insert"
+    ON public.document_dependencies;
+
+DROP POLICY IF EXISTS "dependencies_delete"
+    ON public.document_dependencies;
+
+CREATE POLICY "dependencies_select"
+ON public.document_dependencies
+FOR SELECT
+USING (
+    company_id = (SELECT public.my_company_id())
+);
+
+CREATE POLICY "dependencies_insert"
+ON public.document_dependencies
+FOR INSERT
+WITH CHECK (
+    company_id = (SELECT public.my_company_id())
+    AND (SELECT public.my_role()) = 'owner'
+);
+
+CREATE POLICY "dependencies_delete"
+ON public.document_dependencies
+FOR DELETE
+USING (
+    company_id = (SELECT public.my_company_id())
+    AND (SELECT public.my_role()) = 'owner'
+);
+
+NOTIFY pgrst, 'reload schema';
 -- 8. Refresh the Supabase API schema cache
 NOTIFY pgrst, 'reload schema';
