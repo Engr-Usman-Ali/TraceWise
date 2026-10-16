@@ -2,35 +2,42 @@ import React, { useState } from 'react';
 import DashSidebar from './DashSidebar';
 import { useNotifications } from '../../hooks/useDashboard';
 
-const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { notifs } = useNotifications();
 
   const unreadCount = notifs.filter((n: any) => !n.is_read).length;
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg, #fafafa)' }}>
-      {/* ── Left Sidebar ─────────────────────────────── */}
+    <div
+      style={{
+        display: 'flex',
+        minHeight: '100vh',
+        background: 'var(--bg, #fafafa)',
+      }}
+    >
       <DashSidebar
         notifCount={unreadCount}
         mobileOpen={mobileOpen}
         onClose={() => setMobileOpen(false)}
       />
 
-      {/* ── Main Content ─────────────────────────────── */}
       <main
         style={{
           flex: 1,
           minWidth: 0,
-          padding: 'clamp(16px,3vw,32px)',
+          padding: 'clamp(16px, 3vw, 32px)',
           position: 'relative',
         }}
       >
-        {/* Mobile hamburger button – only shows on small screens */}
         <button
-          onClick={() => setMobileOpen(true)}
+          onClick={() => setMobileOpen((open) => !open)}
           className="dash-mobile-menu-btn"
-          aria-label="Open menu"
+          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={mobileOpen}
+          aria-controls="dashboard-sidebar"
           style={{
             display: 'none',
             position: 'fixed',
@@ -49,12 +56,14 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
             boxShadow: '0 2px 8px rgba(0,0,0,.08)',
           }}
         >
-          ☰
+          {mobileOpen ? '✕' : '☰'}
         </button>
 
         <style>{`
           @media (max-width: 900px) {
-            .dash-mobile-menu-btn { display: flex !important; }
+            .dash-mobile-menu-btn {
+              display: flex !important;
+            }
           }
         `}</style>
 
@@ -64,4 +73,4 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   );
 };
 
-export default DashboardLayout;
+export default DashboardLayout; 
