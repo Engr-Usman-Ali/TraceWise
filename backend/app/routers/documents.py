@@ -155,3 +155,51 @@ async def delete_document(doc_id: str, current_user: dict = Depends(require_owne
         raise HTTPException(404, "Document not found")
 
     db.table("documents").delete().eq("id", doc_id).execute()
+
+    
+# ── GET /documents/department ────────────────────────────────
+@router.get("/department", response_model=list[DocumentOut])
+async def list_department_documents(
+    current_user: dict = Depends(get_current_user),
+):
+    if current_user.get("role") != "department_member":
+        raise HTTPException(
+            status_code=403,
+            detail="Department member access required",
+        )
+
+    company_id = current_user.get("company_id")
+    department_id = current_user.get("department_id")
+
+    if not company_id or not department_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Company or department information is missing",
+        )
+
+    db = get_supabase()
+
+    docs = (
+        db.table("documents")
+        .select("*")
+        .eq("company_id", company_id)
+        .eq("department_id", department_id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+
+    return [
+        DocumentOut(
+            id=d["id"],
+            company_id=d["company_id"],
+            department_id=d.get("department_id"),
+            name=d["name"],
+            file_path=d.get("file_path"),
+            status=d["status"],
+            created_by=d.get("created_by"),
+            updated_at=d.get("updated_at", d.get("created_at", _now())),
+            created_at=d.get("created_at", _now()),
+            department_name=None,
+        )
+        for d in (docs.data or [])
+    ]

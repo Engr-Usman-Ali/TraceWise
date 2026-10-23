@@ -149,33 +149,23 @@ async def login(body: LoginRequest):
         _err(401, "Invalid email or password")
 
     company_id = dept["company_id"]
-    dept_id    = dept["id"]
+    dept_id = dept["id"]
 
-    # Check if a profile already exists for this dept login
-    existing_prof = db.table("profiles").select("id").eq("email", body.email).execute()
-
-    if existing_prof.data:
-        user_id = existing_prof.data[0]["id"]
-    else:
-        # Create a profile row for this dept member
-        user_id = str(uuid.uuid4())
-        db.table("profiles").insert({
-            "id":              user_id,
-            "email":           body.email,
-            "password_hash":   hashed_dept,
-            "full_name":       dept["name"],
-            "role":            "department_member",
-            "company_id":      company_id,
-            "department_id":   dept_id,
-            "created_at":      _now(),
-        }).execute()
-
-    access  = create_access_token(user_id, "department_member", company_id, dept_id)
-    refresh = create_refresh_token(user_id)
+    # Use the existing department ID as the JWT subject.
+    # Do not create a fake Supabase Auth user or profile.
+    access = create_access_token(
+        dept_id,
+        "department_member",
+        company_id,
+        dept_id,
+    )
+    refresh = create_refresh_token(dept_id)
 
     return TokenResponse(
-        access_token=access, refresh_token=refresh,
-        role="department_member", redirect_to="/dept",
+        access_token=access,
+        refresh_token=refresh,
+        role="department_member",
+        redirect_to="/dept",
     )
 
 
@@ -212,33 +202,103 @@ async def refresh_token(body: RefreshRequest):
 # ── GET /auth/me ──────────────────────────────────────────────────────────
 @router.get("/me", response_model=UserProfileOut)
 async def get_me(current_user: dict = Depends(get_current_user)):
-    db  = get_supabase()
+    db = get_supabase()
+
     uid = current_user["sub"]
+    role = current_user.get("role", "owner")
+    company_id = current_user.get("company_id")
+    department_id = current_user.get("department_id")
 
-    prof = db.table("profiles").select("*").eq("id", uid).single().execute()
-    if not prof.data:
-        _err(404, "User not found")
+    # Department accounts use the department ID as their JWT subject.
+    if role == "department_member":
+        dept_result = (
+            db.table("departments")
+            .select("id, company_id, name, login_email")
+            .eq("id", department_id or uid)
+            .eq("company_id", company_id)
+            .limit(1)
+            .execute()
+        )
 
-    p            = prof.data
+        if not dept_result.data:
+            raise HTTPException(
+                status_code=404,
+                detail="Department not found",
+            )
+
+        dept = dept_result.data[0]
+
+        company_result = (
+            db.table("companies")
+            .select("name")
+            .eq("id", dept["company_id"])
+            .limit(1)
+            .execute()
+        )
+
+        company_name = (
+            company_result.data[0]["name"]
+            if company_result.data
+            else None
+        )
+
+        return UserProfileOut(
+            id=dept["id"],
+            full_name=dept["name"],
+            role="department_member",
+            company_id=dept["company_id"],
+            department_id=dept["id"],
+            company_name=company_name,
+            department_name=dept["name"],
+        )
+
+    # Owner accounts must have a profile.
+    profile_result = (
+        db.table("profiles")
+        .select("*")
+        .eq("id", uid)
+        .limit(1)
+        .execute()
+    )
+
+    if not profile_result.data:
+        raise HTTPException(
+            status_code=404,
+            detail="Owner profile not found",
+        )
+
+    profile = profile_result.data[0]
     company_name = None
-    dept_name    = None
+    department_name = None
 
-    if p.get("company_id"):
-        co = db.table("companies").select("name").eq("id", p["company_id"]).single().execute()
-        if co.data:
-            company_name = co.data["name"]
+    if profile.get("company_id"):
+        company_result = (
+            db.table("companies")
+            .select("name")
+            .eq("id", profile["company_id"])
+            .limit(1)
+            .execute()
+        )
+        if company_result.data:
+            company_name = company_result.data[0]["name"]
 
-    if p.get("department_id"):
-        dept = db.table("departments").select("name").eq("id", p["department_id"]).single().execute()
-        if dept.data:
-            dept_name = dept.data["name"]
+    if profile.get("department_id"):
+        department_result = (
+            db.table("departments")
+            .select("name")
+            .eq("id", profile["department_id"])
+            .limit(1)
+            .execute()
+        )
+        if department_result.data:
+            department_name = department_result.data[0]["name"]
 
     return UserProfileOut(
-        id=uid,
-        full_name=p.get("full_name", ""),
-        role=p.get("role", "owner"),
-        company_id=p.get("company_id"),
-        department_id=p.get("department_id"),
+        id=profile["id"],
+        full_name=profile.get("full_name", ""),
+        role=profile.get("role", "owner"),
+        company_id=profile.get("company_id"),
+        department_id=profile.get("department_id"),
         company_name=company_name,
-        department_name=dept_name,
+        department_name=department_name,
     )

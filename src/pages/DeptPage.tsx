@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import DeptLayout from '../components/layout/DeptLayout';
 import { Button, Card, ImpactBadge, DeptChip, EmptyState } from '../components/ui';
+import { FileText, RefreshCw, Search, AlertCircle } from "lucide-react";
+import {
+  getDepartmentDocuments,
+  type DepartmentDocument,
+} from "../services/deptDocuments";
 
 const PCard: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({ c, style }: any) => (
   <Card style={{ padding:'clamp(14px,3vw,22px)', ...style }}>{c}</Card>
@@ -19,36 +24,244 @@ const DashHead: React.FC<{ title:string; sub:string; action?: React.ReactNode }>
 );
 
 /* ── My Documents ─────────────────────────────── */
+
 const MyDocs: React.FC = () => {
   const { department, showToast } = useAuth();
-  const docs = [
-    { icon:'📄', name:'Q4 Sales Playbook',       meta:'Updated 2h ago',   badge:'Review Needed', bc:'warn' },
-    { icon:'📋', name:'Campaign Brief — Oct',     meta:'Updated today',    badge:'Up to Date',   bc:'ok'   },
-    { icon:'📑', name:'Pricing Sheet v7',         meta:'Updated 5h ago',   badge:'Conflict',     bc:'err'  },
-  ];
+
+  const [documents, setDocuments] = useState<DepartmentDocument[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadDocuments() {
+      const token = localStorage.getItem("access_token");
+
+      if (!token) {
+        setError("Please sign in to view your documents.");
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError("");
+
+      try {
+        const result = await getDepartmentDocuments(token);
+
+        if (active) {
+          setDocuments(result);
+        }
+      } catch (err) {
+        if (active) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Could not load documents.",
+          );
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadDocuments();
+
+    return () => {
+      active = false;
+    };
+  }, [refreshKey]);
+
+  const filteredDocuments = documents.filter((document) =>
+    document.name.toLowerCase().includes(search.trim().toLowerCase()),
+  );
+
   return (
     <div className="fade-in">
-      <DashHead title={`${department?.name || 'Department'} Documents`} sub="Documents assigned to your department workspace."
-        action={<Button size="sm" onClick={() => showToast('Upload coming soon.')}>+ Upload</Button>}
+      <DashHead
+        title={`${department?.name || "Department"} Documents`}
+        sub="View documents available to your department workspace."
+        action={
+          <Button
+            size="sm"
+            onClick={() => setRefreshKey((key) => key + 1)}
+            disabled={loading}
+          >
+            <RefreshCw size={14} />
+            {" "}Refresh
+          </Button>
+        }
       />
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:14 }}>
-        {docs.map(d => (
-          <div key={d.name} style={{ background:'#fff', borderRadius:14, padding:'16px', border:'1px solid var(--border)', display:'flex', gap:12, alignItems:'flex-start' }}>
-            <div style={{ width:40, height:40, borderRadius:10, background:'linear-gradient(135deg,var(--amber),var(--gold))', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1rem', color:'#fff', flexShrink:0 }}>{d.icon}</div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontSize:'.9rem', fontWeight:600, color:'var(--char)', marginBottom:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.name}</div>
-              <div style={{ fontSize:'.74rem', color:'var(--char-l)', marginBottom:8 }}>{d.meta}</div>
-              <span style={{ fontSize:'.7rem', fontWeight:700, padding:'2px 9px', borderRadius:9, background:d.bc==='ok'?'rgba(22,163,74,.1)':d.bc==='warn'?'rgba(249,115,22,.12)':'rgba(220,38,38,.09)', color:d.bc==='ok'?'var(--success)':d.bc==='warn'?'var(--amber-d)':'var(--error)' }}>{d.badge}</span>
-            </div>
-          </div>
-        ))}
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "12px 14px",
+          marginBottom: 20,
+          background: "#fff",
+          border: "1px solid var(--border)",
+          borderRadius: 12,
+        }}
+      >
+        <Search size={17} color="var(--char-l)" />
+
+        <input
+          type="search"
+          placeholder="Search documents..."
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          style={{
+            width: "100%",
+            border: "none",
+            outline: "none",
+            background: "transparent",
+            fontSize: ".88rem",
+            color: "var(--char)",
+          }}
+        />
       </div>
-      {docs.length === 0 && (
-        <Card style={{ padding:24 }}><EmptyState icon="📄" title="No documents yet" message="Your owner hasn't assigned any documents to your department yet." /></Card>
+
+      {loading ? (
+        <Card style={{ padding: 32, textAlign: "center" }}>
+          <RefreshCw size={22} />
+          <p style={{ marginTop: 10, color: "var(--char-l)" }}>
+            Loading documents...
+          </p>
+        </Card>
+      ) : error ? (
+        <Card style={{ padding: 24, textAlign: "center" }}>
+          <AlertCircle size={26} color="var(--error)" />
+          <h3 style={{ marginTop: 10 }}>Unable to load documents</h3>
+          <p style={{ margin: "8px 0 16px", color: "var(--char-l)" }}>
+            {error}
+          </p>
+          <Button
+            size="sm"
+            onClick={() => setRefreshKey((key) => key + 1)}
+          >
+            Try again
+          </Button>
+        </Card>
+      ) : filteredDocuments.length === 0 ? (
+        <Card style={{ padding: 28 }}>
+          <EmptyState
+            icon="📄"
+            title={
+              search ? "No matching documents" : "No documents available"
+            }
+            message={
+              search
+                ? "Try another search term."
+                : "Documents available to your department will appear here."
+            }
+          />
+        </Card>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            gap: 14,
+          }}
+        >
+          {filteredDocuments.map((document) => (
+            <Card
+              key={document.id}
+              style={{ padding: 18, minWidth: 0 }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 11,
+                    color: "#fff",
+                    background:
+                      "linear-gradient(135deg, var(--amber), var(--gold))",
+                  }}
+                >
+                  <FileText size={21} />
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h3
+                    style={{
+                      fontSize: ".92rem",
+                      fontWeight: 700,
+                      color: "var(--char)",
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    {document.name || "Untitled document"}
+                  </h3>
+
+                  <p
+                    style={{
+                      marginTop: 6,
+                      fontSize: ".76rem",
+                      color: "var(--char-l)",
+                    }}
+                  >
+                    {document.updated_at
+                      ? `Updated ${new Date(
+                          document.updated_at,
+                        ).toLocaleDateString("en-US")}`
+                      : document.created_at
+                        ? `Created ${new Date(
+                            document.created_at,
+                          ).toLocaleDateString("en-US")}`
+                        : "Date unavailable"}
+                  </p>
+
+                  {document.description && (
+                    <p
+                      style={{
+                        marginTop: 10,
+                        fontSize: ".82rem",
+                        color: "var(--char-l)",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {document.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
       )}
+
+      <p
+        style={{
+          marginTop: 18,
+          fontSize: ".78rem",
+          color: "var(--char-l)",
+        }}
+      >
+        Showing {filteredDocuments.length} of {documents.length} documents.
+      </p>
     </div>
   );
 };
+
 
 /* ── Upload ───────────────────────────────────── */
 const DeptUpload: React.FC = () => {
