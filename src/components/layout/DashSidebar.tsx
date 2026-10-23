@@ -9,6 +9,7 @@ export interface NavDef {
 }
 
 
+
 const NAV: NavDef[] = [
   { label: 'Overview', icon: '📊', path: '/dashboard' },
   { label: 'Documents', icon: '📄', path: '/dashboard/documents' },
@@ -17,10 +18,12 @@ const NAV: NavDef[] = [
     icon: '🔗',
     path: '/dashboard/dependency-explorer',
   },
+  { label: 'Review Tasks', icon: '📋', path: '/dashboard/review-tasks' },
   { label: 'Departments', icon: '🏢', path: '/dashboard/departments' },
   { label: 'Impact Reports', icon: '📈', path: '/dashboard/impact-reports' },
   { label: 'Profile', icon: '👤', path: '/dashboard/profile' },
 ];
+
 
 
 interface DashSidebarProps {

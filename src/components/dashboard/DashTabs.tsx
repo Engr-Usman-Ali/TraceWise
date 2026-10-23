@@ -11,6 +11,7 @@ export interface TabDef {
 const TABS: TabDef[] = [
   { label: 'Overview',    icon: '📊', path: '/dashboard'             },
   { label: 'Documents',   icon: '📄', path: '/dashboard/documents'   },
+  { label: 'Review Tasks', icon: '📋', path: '/dashboard/review-tasks' },
   { label: 'Departments', icon: '🏢', path: '/dashboard/departments' },
   { label: 'Profile',     icon: '👤', path: '/dashboard/profile'     },
 ];

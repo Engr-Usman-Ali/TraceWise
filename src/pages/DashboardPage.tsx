@@ -9,6 +9,7 @@ import DepartmentsTab from '../components/dashboard/DepartmentsTab';
 import ProfileTab from '../components/dashboard/ProfileTab';
 import ImpactReportsTab from '../components/dashboard/ImpactReportsTab';
 import DependencyExplorerTab from '../components/dashboard/DependencyExplorerTab';
+import ReviewTasksTab from '../components/dashboard/ReviewTasksTab';
 
 const DashboardPage: React.FC = () => {
   const accessToken = localStorage.getItem('access_token') ?? '';
@@ -47,6 +48,14 @@ const DashboardPage: React.FC = () => {
             />
           }
         />
+
+        <Route
+          path="review-tasks"
+          element={
+            <ReviewTasksTab
+            />
+          }
+        />        
 
         <Route
           path="profile"
